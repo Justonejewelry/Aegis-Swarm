@@ -36,6 +36,20 @@ class Worker:
 
     async def _load_engagement_from_db(self, engagement_id: UUID) -> Engagement | None:
         try:
+            from aegis.storage.cache import get_cache
+
+            cache = await get_cache()
+            cached = await cache.get_engagement(engagement_id)
+            if cached is not None:
+                if cached.engagement_id not in self.orch.engagements:
+                    try:
+                        self.orch.register_engagement(cached)
+                    except ValueError:
+                        self.orch.engagements[cached.engagement_id] = cached
+                return cached
+        except Exception as e:
+            logger.debug("worker cache get engagement skipped: %s", e)
+        try:
             from aegis.storage.repositories import EngagementRepository
             from aegis.storage.session import get_session
 
@@ -50,6 +64,13 @@ class Worker:
                         self.orch.register_engagement(eng)
                     except ValueError:
                         self.orch.engagements[eng.engagement_id] = eng
+                try:
+                    from aegis.storage.cache import get_cache
+
+                    cache = await get_cache()
+                    await cache.set_engagement(eng)
+                except Exception as e:
+                    logger.debug("worker cache set engagement skipped: %s", e)
                 return eng
         except Exception as e:
             logger.debug("worker load engagement from DB skipped: %s", e)
@@ -91,6 +112,13 @@ class Worker:
             status=EngagementStatus.ACTIVE,
         )
         self.orch.register_engagement(eng)
+        try:
+            from aegis.storage.cache import get_cache
+
+            cache = await get_cache()
+            await cache.set_engagement(eng)
+        except Exception as e:
+            logger.debug("worker cache synthetic engagement skipped: %s", e)
         try:
             from aegis.storage.repositories import EngagementRepository
             from aegis.storage.session import get_session
