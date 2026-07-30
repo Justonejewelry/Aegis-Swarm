@@ -1,3 +1,19 @@
-from aegis.ingestion.connectors import ElasticConnector, IngestionPipeline, SentinelConnector, SyslogConnector
+from aegis.ingestion.connectors import (
+    CrowdStrikeConnector,
+    DefenderConnector,
+    ElasticConnector,
+    IngestionPipeline,
+    SentinelConnector,
+    SyslogConnector,
+    build_default_pipeline,
+)
 
-__all__ = ["ElasticConnector", "IngestionPipeline", "SentinelConnector", "SyslogConnector"]
+__all__ = [
+    "CrowdStrikeConnector",
+    "DefenderConnector",
+    "ElasticConnector",
+    "IngestionPipeline",
+    "SentinelConnector",
+    "SyslogConnector",
+    "build_default_pipeline",
+]
