@@ -35,3 +35,30 @@ See `deploy/k8s/` for starter manifests.
 - [ ] Per-agent service accounts  
 - [ ] Immutable audit log shipping to SIEM  
 - [ ] Backup & restore tested for Postgres  
+
+## Redis topology
+
+See [REDIS_TOPOLOGY.md](REDIS_TOPOLOGY.md) and runbook [REDIS_HA.md](../runbooks/REDIS_HA.md).
+
+| Env | Mode | Notes |
+|-----|------|--------|
+| Dev | `standalone` | Compose `redis` service |
+| Prod | `sentinel` or managed HA | Set `AEGIS_REDIS_MODE`, sentinels, password |
+| Scale cache | `cluster` | Prefer separate cache URL later if needed |
+
+```bash
+export AEGIS_REDIS_MODE=standalone
+export AEGIS_REDIS_URL=redis://localhost:6379/0
+# Production example:
+# export AEGIS_REDIS_MODE=sentinel
+# export AEGIS_REDIS_SENTINELS=s1:26379,s2:26379,s3:26379
+# export AEGIS_REDIS_MASTER_NAME=aegis-master
+```
+
+## Metrics
+
+`GET /metrics` — Prometheus text format when `AEGIS_ENABLE_METRICS=true`.
+
+## Kill-switch
+
+`POST /engagements/{id}/abort?reason=...` — sets status `aborted`, invalidates cache, audits.
