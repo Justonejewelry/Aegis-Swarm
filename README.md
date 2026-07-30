@@ -4,7 +4,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/Justonejewelry/Aegis-Swarm/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Justonejewelry/Aegis-Swarm/actions)
 [![License](https://img.shields.io/badge/license-Proprietary-lightgrey?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)](https://www.python.org/)
-[![Agents](https://img.shields.io/badge/agents-20%20implemented%20%2F%2064%20planned-purple?style=flat-square)](docs/agents/CATALOG.md)
+[![Agents](https://img.shields.io/badge/agents-63%20implemented%20%2F%2064%20catalog-purple?style=flat-square)](docs/agents/CATALOG.md)
 
 **Autonomous Enterprise Guard & Intelligence System**
 
@@ -37,11 +37,23 @@ uvicorn aegis.api.main:app --reload --port 8080
 
 API docs: http://localhost:8080/docs
 
-## Current status (v0.1.0)
+## Current status (v0.2.0)
 
-- **20 agents implemented** and registered via `aegis.core.registry`
+- **63 agents implemented** and registered via `aegis.core.registry`
 - Engagement approval + scoped dispatch enforced in the orchestrator
 - Unit tests for risk, scope gates, attack paths, registry, auth analysis
+
+## Task bus & workers
+
+```bash
+# Terminal A — API
+uvicorn aegis.api.main:app --port 8080
+
+# Terminal B — worker (Redis if available, else in-memory)
+python -m aegis.messaging.worker
+```
+
+Enqueue: `POST /tasks` with `engagement_id`, `recipient`, `payload`.
 
 ## Documentation
 
@@ -52,6 +64,7 @@ API docs: http://localhost:8080/docs
 - [ATT&CK coverage model](docs/architecture/ATTACK_COVERAGE.md)
 - [Risk scoring](docs/architecture/RISK_SCORING.md)
 - [Deployment guide](docs/architecture/DEPLOYMENT.md)
+- [v0.2.0 release notes](docs/releases/v0.2.0.md)
 - [v0.1.0 release notes](docs/releases/v0.1.0.md)
 - [Runbooks](docs/runbooks/)
 
