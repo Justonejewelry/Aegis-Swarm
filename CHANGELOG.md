@@ -1,11 +1,22 @@
 # Changelog
 
+## [0.2.0] — 2026-07-30
+
+### Added
+- **Full catalog agent coverage** — 63 implemented agents (all domains)
+- Compact agent helpers (`AnalyticAgent`, `ResultAgent`)
+- **Redis Streams task bus** with in-memory fallback (`aegis.messaging.bus`)
+- **Worker loop** (`aegis.messaging.worker`) for background dispatch
+- API `POST /tasks` enqueue endpoint
+- **Ingestion connectors** (stubs): Syslog, Elastic, Microsoft Sentinel + normalize pipeline
+- Tests for registry count, bus, worker, ingestion
+
 ## [0.1.0] — 2026-07-30
 
 ### Added
 - Multi-agent core: `BaseAgent`, confidence model, orchestrator with engagement scope gates
 - FastAPI control plane: `/health`, `/agents`, `/engagements`, `/dispatch`
-- Agent registry with **20 implemented agents** across 7 domains
+- Agent registry with initial agents across 7 domains
 - Risk scoring model and prioritization helpers
 - JSON schemas for agent messages, engagements, findings
 - PostgreSQL schema (`schemas/sql/init.sql`)
