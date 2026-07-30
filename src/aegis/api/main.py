@@ -62,6 +62,13 @@ class EnqueueRequest(BaseModel):
 
 async def _persist_engagement(eng: Engagement) -> None:
     settings = get_settings()
+    try:
+        from aegis.storage.cache import get_cache
+
+        cache = await get_cache()
+        await cache.set_engagement(eng)
+    except Exception as e:
+        logger.debug("cache set engagement skipped: %s", e)
     if not settings.persist_findings:
         return
     try:
@@ -101,6 +108,16 @@ async def _load_findings_from_db(engagement_id: UUID) -> list[Finding]:
     if engagement_id in _findings_by_eng and _findings_by_eng[engagement_id]:
         return _findings_by_eng[engagement_id]
     try:
+        from aegis.storage.cache import get_cache
+
+        cache = await get_cache()
+        cached = await cache.get_findings(engagement_id)
+        if cached is not None:
+            _findings_by_eng[engagement_id] = cached
+            return cached
+    except Exception as e:
+        logger.debug("cache get findings skipped: %s", e)
+    try:
         from aegis.storage.repositories import FindingRepository
         from aegis.storage.session import get_session
 
@@ -110,6 +127,13 @@ async def _load_findings_from_db(engagement_id: UUID) -> list[Finding]:
             findings = [FindingRepository.to_finding(r) for r in rows]
             if findings:
                 _findings_by_eng[engagement_id] = findings
+                try:
+                    from aegis.storage.cache import get_cache
+
+                    cache = await get_cache()
+                    await cache.set_findings(engagement_id, findings)
+                except Exception as e:
+                    logger.debug("cache set findings skipped: %s", e)
             return findings
     except Exception as e:
         logger.debug("load findings from DB skipped: %s", e)
@@ -121,6 +145,13 @@ async def _persist_findings(engagement_id: UUID, findings: list[Finding]) -> Non
         return
     settings = get_settings()
     _findings_by_eng.setdefault(engagement_id, []).extend(findings)
+    try:
+        from aegis.storage.cache import get_cache
+
+        cache = await get_cache()
+        await cache.set_findings(engagement_id, _findings_by_eng[engagement_id])
+    except Exception as e:
+        logger.debug("cache set findings on persist skipped: %s", e)
     if not settings.persist_findings:
         return
     try:
@@ -153,15 +184,47 @@ async def _audit(
 
 
 async def _resolve_engagement(engagement_id: UUID) -> Engagement | None:
+    """Memory → Redis cache → Postgres hydration."""
     eng = orch.engagements.get(engagement_id)
     if eng is not None:
         return eng
-    return await _load_engagement_from_db(engagement_id)
+    try:
+        from aegis.storage.cache import get_cache
+
+        cache = await get_cache()
+        cached = await cache.get_engagement(engagement_id)
+        if cached is not None:
+            if cached.engagement_id not in orch.engagements:
+                try:
+                    orch.register_engagement(cached)
+                except ValueError:
+                    orch.engagements[cached.engagement_id] = cached
+            return cached
+    except Exception as e:
+        logger.debug("cache get engagement skipped: %s", e)
+    eng = await _load_engagement_from_db(engagement_id)
+    if eng is not None:
+        try:
+            from aegis.storage.cache import get_cache
+
+            cache = await get_cache()
+            await cache.set_engagement(eng)
+        except Exception as e:
+            logger.debug("cache set after DB load skipped: %s", e)
+    return eng
 
 
 @app.get("/health")
 async def health() -> dict:
     settings = get_settings()
+    cache_stats: dict = {}
+    try:
+        from aegis.storage.cache import get_cache
+
+        cache = await get_cache()
+        cache_stats = cache.stats()
+    except Exception:
+        cache_stats = {"backend": "unavailable"}
     return {
         "status": "ok",
         "agents": len(orch.agents),
@@ -169,6 +232,7 @@ async def health() -> dict:
         "env": settings.env,
         "persist": settings.persist_findings,
         "engagements_in_memory": len(orch.engagements),
+        "cache": cache_stats,
     }
 
 
