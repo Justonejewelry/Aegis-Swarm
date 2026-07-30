@@ -3,17 +3,16 @@
 ## [0.2.1] — 2026-07-30
 
 ### Added
+- **Redis caching layer** (`aegis.storage.cache`): engagements + findings with TTL, in-memory fallback, hit/miss stats on `/health`
+- Lookup order: process memory → Redis cache → Postgres
+- Cache write-through on engagement create/approve and findings persist; invalidate on updates
+- Settings: `AEGIS_ENABLE_CACHE`, `AEGIS_CACHE_ENGAGEMENT_TTL`, `AEGIS_CACHE_FINDINGS_TTL`
 - **PostgreSQL storage layer** (`aegis.storage`): async SQLAlchemy models + repositories for Engagement, Finding, AuditLog, AgentRegistry
 - **Engagement wiring**: create / approve / list / get hydrate from Postgres; workers load durable engagements before synthesizing
-- API: `GET /engagements` (memory + DB), `_resolve_engagement` memory-first then DB, findings rehydrate from DB
+- API: `GET /engagements` (memory + DB), `_resolve_engagement` memory → cache → DB
 - Repository helpers: `EngagementRepository.upsert` / `to_engagement`, `FindingRepository.create` + `to_finding`, `AuditRepository.log`
-- API persistence hooks: engagements, findings, and audit events written when DB is available
-- **GraphStore** (`aegis.analytics.graph_store`): shared NetworkX DiGraph per engagement
-- HTML executive report endpoint: `GET /engagements/{id}/report`
-- Settings module (`aegis.core.settings`) with env-driven connector credentials
-- Expanded ingestion: CrowdStrike + Defender connectors
-- Worker: automatic finding persistence + DLQ + counters + DB engagement load
-- 18 unit tests passing
+- Worker: cache-aware engagement load + finding persistence + DLQ
+- 24 unit tests passing
 
 ## [0.2.0] — 2026-07-30
 

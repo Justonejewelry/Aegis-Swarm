@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     persist_findings: bool = True
     persist_audit: bool = True
     enable_graph_store: bool = True
+    enable_cache: bool = True
+    cache_engagement_ttl: int = 300
+    cache_findings_ttl: int = 120
 
 
 @lru_cache
