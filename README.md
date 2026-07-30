@@ -37,11 +37,14 @@ uvicorn aegis.api.main:app --reload --port 8080
 
 API docs: http://localhost:8080/docs
 
-## Current status (v0.2.0)
+## Current status (v0.2.1)
 
-- **63 agents implemented** and registered via `aegis.core.registry`
-- Engagement approval + scoped dispatch enforced in the orchestrator
-- Unit tests for risk, scope gates, attack paths, registry, auth analysis
+- **63 agents** registered · Redis Streams + DLQ + worker
+- **PostgreSQL storage** for engagements, findings, audit
+- **GraphStore** (NetworkX) shared by attack-path & privilege-graph agents
+- HTML executive report + Streamlit dashboard + Grafana stubs
+- 5 ingestion connectors (Syslog, Elastic, Sentinel, CrowdStrike, Defender)
+- 17 unit tests passing
 
 ## Task bus & workers
 
@@ -64,7 +67,7 @@ Enqueue: `POST /tasks` with `engagement_id`, `recipient`, `payload`.
 - [ATT&CK coverage model](docs/architecture/ATTACK_COVERAGE.md)
 - [Risk scoring](docs/architecture/RISK_SCORING.md)
 - [Deployment guide](docs/architecture/DEPLOYMENT.md)
-- [v0.2.0 release notes](docs/releases/v0.2.0.md)
+- [v0.2.1 / v0.2.0 release notes](docs/releases/v0.2.0.md)
 - [v0.1.0 release notes](docs/releases/v0.1.0.md)
 - [Runbooks](docs/runbooks/)
 
