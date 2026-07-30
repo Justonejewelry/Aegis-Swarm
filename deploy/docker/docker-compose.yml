@@ -34,6 +34,7 @@ services:
       AEGIS_DATABASE_URL: postgresql+asyncpg://aegis:aegis_dev_only@postgres:5432/aegis
       AEGIS_REDIS_URL: redis://redis:6379/0
       AEGIS_ENV: development
+      AEGIS_PERSIST_FINDINGS: "true"
     ports:
       - "8080:8080"
     depends_on:
@@ -41,6 +42,37 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    command: ["python", "-m", "aegis.messaging.worker"]
+    environment:
+      AEGIS_DATABASE_URL: postgresql+asyncpg://aegis:aegis_dev_only@postgres:5432/aegis
+      AEGIS_REDIS_URL: redis://redis:6379/0
+      AEGIS_ENV: development
+      AEGIS_PERSIST_FINDINGS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: aegis_dev_only
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ../../deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../deploy/grafana/aegis-overview.json:/var/lib/grafana/dashboards/aegis-overview.json:ro
+    depends_on:
+      - postgres
 
 volumes:
   pgdata:

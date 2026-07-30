@@ -68,3 +68,18 @@ CREATE TABLE IF NOT EXISTS assets (
   last_seen TIMESTAMPTZ,
   meta JSONB NOT NULL DEFAULT '{}'
 );
+
+-- Privilege / attack-path graph edges (NetworkX persistence)
+CREATE TABLE IF NOT EXISTS graph_edges (
+  edge_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  engagement_id UUID NOT NULL,
+  src TEXT NOT NULL,
+  dst TEXT NOT NULL,
+  relation TEXT DEFAULT 'related',
+  meta JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_graph_engagement ON graph_edges(engagement_id);
+CREATE INDEX IF NOT EXISTS idx_graph_src ON graph_edges(src);
+CREATE INDEX IF NOT EXISTS idx_graph_dst ON graph_edges(dst);
