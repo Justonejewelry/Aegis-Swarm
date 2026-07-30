@@ -6,13 +6,6 @@ from uuid import UUID
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from aegis.agents.blue.siem_correlator import SIEMCorrelator
-from aegis.agents.command.mission_controller import MissionController
-from aegis.agents.dfir.timeline_builder import TimelineBuilder
-from aegis.agents.intel.attack_mapper import AttackMapper
-from aegis.agents.purple.detection_validator import DetectionValidator
-from aegis.agents.red.attack_path_modeler import AttackPathModeler
-from aegis.agents.reporting.executive_reporter import ExecutiveReporter
 from aegis.core.models import (
     AgentMessage,
     Engagement,
@@ -22,6 +15,7 @@ from aegis.core.models import (
     Scope,
 )
 from aegis.core.orchestrator import Orchestrator
+from aegis.core.registry import build_default_agents
 
 app = FastAPI(
     title="AEGIS Swarm API",
@@ -30,15 +24,7 @@ app = FastAPI(
 )
 
 orch = Orchestrator()
-for agent in (
-    MissionController(),
-    SIEMCorrelator(),
-    AttackMapper(),
-    DetectionValidator(),
-    AttackPathModeler(),
-    TimelineBuilder(),
-    ExecutiveReporter(),
-):
+for agent in build_default_agents():
     orch.register(agent)
 
 
@@ -59,7 +45,7 @@ class DispatchRequest(BaseModel):
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "agents": len(orch.agents)}
+    return {"status": "ok", "agents": len(orch.agents), "version": "0.1.0"}
 
 
 @app.get("/agents")
