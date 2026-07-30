@@ -34,13 +34,45 @@ class Worker:
         self.processed = 0
         self.failed = 0
 
-    def ensure_engagement(self, engagement_id: str | UUID, payload: dict[str, Any]) -> None:
+    async def _load_engagement_from_db(self, engagement_id: UUID) -> Engagement | None:
+        try:
+            from aegis.storage.repositories import EngagementRepository
+            from aegis.storage.session import get_session
+
+            async with get_session() as session:
+                repo = EngagementRepository(session)
+                row = await repo.get(engagement_id)
+                if row is None:
+                    return None
+                eng = EngagementRepository.to_engagement(row)
+                if eng.engagement_id not in self.orch.engagements:
+                    try:
+                        self.orch.register_engagement(eng)
+                    except ValueError:
+                        self.orch.engagements[eng.engagement_id] = eng
+                return eng
+        except Exception as e:
+            logger.debug("worker load engagement from DB skipped: %s", e)
+            return None
+
+    async def ensure_engagement(
+        self, engagement_id: str | UUID, payload: dict[str, Any]
+    ) -> Engagement:
         eid = UUID(str(engagement_id))
         if eid in self.orch.engagements:
-            return
+            return self.orch.engagements[eid]
+
+        loaded = await self._load_engagement_from_db(eid)
+        if loaded is not None:
+            return loaded
+
         mode_raw = payload.get("mode", "assess")
         try:
-            mode = EngagementMode(mode_raw) if not isinstance(mode_raw, EngagementMode) else mode_raw
+            mode = (
+                EngagementMode(mode_raw)
+                if not isinstance(mode_raw, EngagementMode)
+                else mode_raw
+            )
         except (ValueError, TypeError):
             mode = EngagementMode.ASSESS
         scope_raw = payload.get("scope")
@@ -59,6 +91,16 @@ class Worker:
             status=EngagementStatus.ACTIVE,
         )
         self.orch.register_engagement(eng)
+        try:
+            from aegis.storage.repositories import EngagementRepository
+            from aegis.storage.session import get_session
+
+            async with get_session() as session:
+                repo = EngagementRepository(session)
+                await repo.upsert(eng)
+        except Exception as e:
+            logger.debug("worker persist synthetic engagement skipped: %s", e)
+        return eng
 
     async def _persist_findings(self, engagement_id: UUID, findings: list[Finding]) -> None:
         settings = get_settings()
@@ -72,7 +114,6 @@ class Worker:
                 repo = FindingRepository(session)
                 for f in findings:
                     await repo.create(f)
-                await session.commit()
             logger.info("persisted %d findings for engagement %s", len(findings), engagement_id)
         except Exception as e:
             logger.warning("worker persist findings failed (dev OK): %s", e)
@@ -82,13 +123,17 @@ class Worker:
         recipient = task.get("recipient") or task.get("agent_id")
         if not engagement_id or not recipient:
             return {"ok": False, "error": "engagement_id and recipient required"}
-        self.ensure_engagement(engagement_id, task)
         eid = UUID(str(engagement_id))
+        await self.ensure_engagement(eid, task)
+        try:
+            msg_type = MsgType(task.get("msg_type", "task"))
+        except (ValueError, TypeError):
+            msg_type = MsgType.TASK
         msg = AgentMessage(
             engagement_id=eid,
             sender=task.get("sender", "worker"),
             recipient=recipient,
-            msg_type=MsgType(task.get("msg_type", "task")),
+            msg_type=msg_type,
             priority=int(task.get("priority", 3)),
             payload=task.get("payload") or {},
         )
@@ -101,7 +146,9 @@ class Worker:
             if hasattr(result, "model_dump"):
                 data: Any = result.model_dump(mode="json")
             elif isinstance(result, list):
-                data = [r.model_dump(mode="json") if hasattr(r, "model_dump") else r for r in result]
+                data = [
+                    r.model_dump(mode="json") if hasattr(r, "model_dump") else r for r in result
+                ]
             else:
                 data = result
             self.processed += 1
