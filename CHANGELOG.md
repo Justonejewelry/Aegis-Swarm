@@ -4,15 +4,16 @@
 
 ### Added
 - **PostgreSQL storage layer** (`aegis.storage`): async SQLAlchemy models + repositories for Engagement, Finding, AuditLog, AgentRegistry
+- **Engagement wiring**: create / approve / list / get hydrate from Postgres; workers load durable engagements before synthesizing
+- API: `GET /engagements` (memory + DB), `_resolve_engagement` memory-first then DB, findings rehydrate from DB
+- Repository helpers: `EngagementRepository.upsert` / `to_engagement`, `FindingRepository.create` + `to_finding`, `AuditRepository.log`
 - API persistence hooks: engagements, findings, and audit events written when DB is available
-- **GraphStore** (`aegis.analytics.graph_store`): shared NetworkX DiGraph per engagement, used by attack-path-modeler and privilege-graph-analysis; optional Postgres `graph_edges` table
+- **GraphStore** (`aegis.analytics.graph_store`): shared NetworkX DiGraph per engagement
 - HTML executive report endpoint: `GET /engagements/{id}/report`
-- Streamlit SOC dashboard (`dashboards/streamlit_app.py`)
-- Grafana provisioning stubs + overview dashboard JSON
-- Docker Compose: worker service + Grafana (port 3000)
 - Settings module (`aegis.core.settings`) with env-driven connector credentials
-- Expanded ingestion: CrowdStrike + Defender connectors with live-query readiness flags
-- Worker: automatic finding persistence + DLQ + counters
+- Expanded ingestion: CrowdStrike + Defender connectors
+- Worker: automatic finding persistence + DLQ + counters + DB engagement load
+- 18 unit tests passing
 
 ## [0.2.0] — 2026-07-30
 

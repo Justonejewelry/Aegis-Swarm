@@ -1,4 +1,4 @@
-"""AEGIS durable storage (PostgreSQL)."""
+"""Durable storage layer (PostgreSQL via SQLAlchemy async)."""
 from aegis.storage.repositories import (
     AgentRegistryRepository,
     AuditRepository,
