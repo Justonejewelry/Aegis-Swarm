@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis.local/schemas/engagement.schema.json",
+  "title": "AEGISEngagement",
+  "type": "object",
+  "required": ["engagement_id", "name", "mode", "scope", "status", "approver", "created_at"],
+  "properties": {
+    "engagement_id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string" },
+    "mode": {
+      "type": "string",
+      "enum": ["monitor", "assess", "hunt", "purple_validate", "incident", "tabletop"]
+    },
+    "scope": {
+      "type": "object",
+      "required": ["in_scope_cidrs", "in_scope_domains", "out_of_scope"],
+      "properties": {
+        "in_scope_cidrs": { "type": "array", "items": { "type": "string" } },
+        "in_scope_domains": { "type": "array", "items": { "type": "string" } },
+        "in_scope_assets": { "type": "array", "items": { "type": "string" } },
+        "out_of_scope": { "type": "array", "items": { "type": "string" } },
+        "allowed_validation_actions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["passive_recon", "config_review", "detection_test", "control_probe", "emulation_plan"]
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "pending_approval", "active", "paused", "completed", "aborted"]
+    },
+    "approver": { "type": "string" },
+    "start_at": { "type": "string", "format": "date-time" },
+    "end_at": { "type": "string", "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}

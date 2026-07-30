@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis.local/schemas/finding.schema.json",
+  "title": "AEGISFinding",
+  "type": "object",
+  "required": ["finding_id", "engagement_id", "title", "severity", "category", "confidence", "sources", "created_at"],
+  "properties": {
+    "finding_id": { "type": "string", "format": "uuid" },
+    "engagement_id": { "type": "string", "format": "uuid" },
+    "title": { "type": "string", "minLength": 3, "maxLength": 256 },
+    "description": { "type": "string" },
+    "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+    "category": {
+      "type": "string",
+      "enum": ["vulnerability", "misconfiguration", "detection_gap", "active_threat", "compliance", "identity", "network", "endpoint", "cloud"]
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "risk_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "mitre_techniques": { "type": "array", "items": { "type": "string" } },
+    "cves": { "type": "array", "items": { "type": "string" } },
+    "assets": { "type": "array", "items": { "type": "string" } },
+    "sources": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "remediation": { "type": "array", "items": { "type": "string" } },
+    "evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}
