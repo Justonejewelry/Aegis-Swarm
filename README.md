@@ -1,5 +1,11 @@
 # AEGIS Swarm
 
+[![Release](https://img.shields.io/github/v/release/Justonejewelry/Aegis-Swarm?include_prereleases&style=flat-square)](https://github.com/Justonejewelry/Aegis-Swarm/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/Justonejewelry/Aegis-Swarm/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Justonejewelry/Aegis-Swarm/actions)
+[![License](https://img.shields.io/badge/license-Proprietary-lightgrey?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)](https://www.python.org/)
+[![Agents](https://img.shields.io/badge/agents-20%20implemented%20%2F%2064%20planned-purple?style=flat-square)](docs/agents/CATALOG.md)
+
 **Autonomous Enterprise Guard & Intelligence System**
 
 Enterprise-grade multi-agent AI platform for authorized cyber defense, threat assessment, purple-team validation, detection engineering, DFIR support, and executive risk reporting.
@@ -21,7 +27,8 @@ Enterprise-grade multi-agent AI platform for authorized cyber defense, threat as
 ## Quick start (dev)
 
 ```bash
-cd aegis-swarm
+git clone https://github.com/Justonejewelry/Aegis-Swarm.git
+cd Aegis-Swarm
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 docker compose -f deploy/docker/docker-compose.yml up -d
@@ -29,6 +36,12 @@ uvicorn aegis.api.main:app --reload --port 8080
 ```
 
 API docs: http://localhost:8080/docs
+
+## Current status (v0.1.0)
+
+- **20 agents implemented** and registered via `aegis.core.registry`
+- Engagement approval + scoped dispatch enforced in the orchestrator
+- Unit tests for risk, scope gates, attack paths, registry, auth analysis
 
 ## Documentation
 
@@ -39,7 +52,12 @@ API docs: http://localhost:8080/docs
 - [ATT&CK coverage model](docs/architecture/ATTACK_COVERAGE.md)
 - [Risk scoring](docs/architecture/RISK_SCORING.md)
 - [Deployment guide](docs/architecture/DEPLOYMENT.md)
+- [v0.1.0 release notes](docs/releases/v0.1.0.md)
 - [Runbooks](docs/runbooks/)
+
+## Topics
+
+`cybersecurity` · `soc` · `purple-team` · `threat-hunting` · `mitre-attack` · `multi-agent` · `fastapi` · `dfir`
 
 ## License
 
