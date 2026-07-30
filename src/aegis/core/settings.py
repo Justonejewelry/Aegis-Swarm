@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,8 +13,11 @@ class Settings(BaseSettings):
     env: str = "development"
     database_url: str = "postgresql+asyncpg://aegis:aegis_dev_only@localhost:5432/aegis"
     redis_url: str = "redis://localhost:6379/0"
+    redis_mode: Literal["standalone", "sentinel", "cluster"] = "standalone"
+    redis_sentinels: str | None = None
+    redis_master_name: str = "aegis-master"
+    redis_password: str | None = None
 
-    # Ingestion connector endpoints / credentials (optional — stubs still work without them)
     elastic_url: str | None = None
     elastic_api_key: str | None = None
     elastic_index: str = "logs-*"
@@ -28,13 +32,14 @@ class Settings(BaseSettings):
     defender_client_id: str | None = None
     defender_client_secret: str | None = None
 
-    # Feature flags
     persist_findings: bool = True
     persist_audit: bool = True
     enable_graph_store: bool = True
     enable_cache: bool = True
     cache_engagement_ttl: int = 300
     cache_findings_ttl: int = 120
+    enable_metrics: bool = True
+    api_key: str | None = None
 
 
 @lru_cache
