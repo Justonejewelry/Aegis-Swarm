@@ -1,12 +1,16 @@
 # Changelog
 
+## [0.4.2] — 2026-07-31
+
+### Added
+- Full control plane sync to GitHub (auth, metrics, evidence, ATT&CK, audit export, reports)
+- X-Request-ID middleware
+- GET /engagements/{id}/timeline — findings + audit chronological DFIR view
+
 ## [0.4.1] — 2026-07-31
 
 ### Added
-- Expanded ATT&CK catalog (60+ techniques), by_tactic rollups, sub-technique parent credit
-- Live finding hydration for /attack/coverage (engagement or global top-risk)
-- Evidence chain Postgres persistence (EvidenceRepository)
-- Prometheus in lab + base docker-compose scraping api:8080/metrics
+- Expanded ATT&CK catalog, live finding hydration, evidence Postgres, Prometheus lab
 
 ## [0.4.0] — 2026-07-31
 
