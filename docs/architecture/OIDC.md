@@ -5,23 +5,17 @@
 ```bash
 export AEGIS_OIDC_ISSUER=https://login.microsoftonline.com/<tenant>/v2.0
 export AEGIS_OIDC_AUDIENCE=api://aegis-swarm
-export AEGIS_OIDC_JWKS_URL=https://.../jwks   # optional; default {issuer}/.well-known/jwks.json
+export AEGIS_OIDC_JWKS_URL=https://.../jwks   # optional
+export AEGIS_OIDC_APPROVER_ROLES=soc-lead,admin,approver
 ```
 
-## Behavior
+## JWKS resolution order
 
-| Config | Mutating routes |
-|--------|-----------------|
-| Neither API key nor OIDC | Open (dev) |
-| `AEGIS_API_KEY` only | Require `X-API-Key` |
-| `AEGIS_OIDC_ISSUER` only | Require `Authorization: Bearer <jwt>` |
-| Both | Either credential accepted |
+1. `AEGIS_OIDC_JWKS_URL` if set
+2. `{issuer}/.well-known/openid-configuration` → `jwks_uri`
+3. Fallback: `{issuer}/.well-known/jwks.json`
 
-## Validation rules
+## Approve / Abort
 
-- Algorithms: RS256/384/512, ES256/384/512 only (no HS*)
-- Signature verified against JWKS `kid`
-- `iss` must match `AEGIS_OIDC_ISSUER`
-- `aud` checked when `AEGIS_OIDC_AUDIENCE` set
-- `exp` required
-- JWKS cached 1h; forced refresh on unknown `kid` (rotation)
+Requires one of `AEGIS_OIDC_APPROVER_ROLES` when OIDC is enabled.
+Matching `X-API-Key` still bypasses (break-glass / automation).

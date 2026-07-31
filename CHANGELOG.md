@@ -1,34 +1,33 @@
 # Changelog
 
+## [0.3.3] — 2026-07-30
+
+### Added
+- OpenID discovery (`jwks_uri` from openid-configuration)
+- Role-gated approve/abort (`require_approver_role`, `AEGIS_OIDC_APPROVER_ROLES`)
+- Principal.has_any_role; API key break-glass bypass
+
 ## [0.3.2] — 2026-07-30
 
 ### Added
-- README refreshed to v0.3.x capability surface
-- Post–v0.3.1 roadmap (next 10 steps)
-- API integration smoke tests (engagement lifecycle, purple, compliance, metrics)
-- Metrics endpoint resilient fallback for non-main-thread scrapes
+- README parity, post-v0.3 roadmap, API integration smoke tests
 
 ## [0.3.1] — 2026-07-30
 
 ### Added
-- Real JWKS OIDC verification + require_auth (API key or Bearer)
+- Real JWKS OIDC verification + require_auth
 
 ## [0.3.0] — 2026-07-30
 
 ### Added
-- Roadmap 11–20: k8s HPA, purple harness, compliance, chaos, production candidate
-
-## [0.2.3] — 2026-07-30
-
-### Added
-- API key, audit, live connectors, ingest, domain streams
+- Roadmap 11–20 production candidate
 
 ## [0.2.0] — 2026-07-30
 
 ### Added
-- 63 agents, Streams bus, ingestion stubs
+- 63 agents, Streams bus
 
 ## [0.1.0] — 2026-07-30
 
 ### Added
-- Core multi-agent control plane
+- Core control plane

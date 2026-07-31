@@ -1,8 +1,4 @@
-"""OIDC JWT verification via issuer JWKS.
-
-When AEGIS_OIDC_ISSUER is unset, OIDC is disabled (API-key-only / open dev).
-When set, Bearer tokens are validated against JWKS (RS256/ES256).
-"""
+"""OIDC JWT verification via issuer JWKS + OpenID discovery."""
 from __future__ import annotations
 
 import logging
@@ -21,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_ALGORITHMS = ("RS256", "RS384", "RS512", "ES256", "ES384", "ES512")
 JWKS_TTL = 3600
+DISCOVERY_TTL = 3600
 
 
 @dataclass
@@ -31,10 +28,46 @@ class Principal:
     roles: list[str] = field(default_factory=list)
     claims: dict[str, Any] = field(default_factory=dict)
 
+    def has_any_role(self, required: list[str] | set[str]) -> bool:
+        if not required:
+            return True
+        mine = {r.lower() for r in self.roles}
+        return any(r.lower() in mine for r in required)
+
+
+class DiscoveryCache:
+    def __init__(self) -> None:
+        self._doc: dict[str, Any] | None = None
+        self._issuer: str | None = None
+        self._fetched_at: float = 0.0
+
+    def clear(self) -> None:
+        self._doc = None
+        self._issuer = None
+        self._fetched_at = 0.0
+
+    async def get(self, issuer: str) -> dict[str, Any]:
+        now = time.time()
+        if self._doc and self._issuer == issuer and now - self._fetched_at < DISCOVERY_TTL:
+            return self._doc
+        url = f"{issuer.rstrip('/')}/.well-known/openid-configuration"
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                doc = resp.json()
+        except Exception as e:
+            logger.warning("OIDC discovery failed issuer=%s err=%s", issuer, e)
+            if self._doc and self._issuer == issuer:
+                return self._doc
+            raise HTTPException(503, f"OIDC discovery unavailable: {e}") from e
+        self._doc = doc
+        self._issuer = issuer
+        self._fetched_at = now
+        return doc
+
 
 class JWKSCache:
-    """Fetch and cache OpenID provider JWKS with simple TTL refresh."""
-
     def __init__(self) -> None:
         self._keys: dict[str, Any] = {}
         self._fetched_at: float = 0.0
@@ -68,7 +101,6 @@ class JWKSCache:
             logger.error("JWKS fetch failed url=%s err=%s", jwks_url, e)
             if not self._keys:
                 raise HTTPException(503, f"JWKS unavailable: {e}") from e
-            logger.warning("using stale JWKS cache")
             return
         keys: dict[str, Any] = {}
         for k in payload.get("keys", []):
@@ -77,15 +109,24 @@ class JWKSCache:
         self._keys = keys
         self._fetched_at = time.time()
         self._jwks_url = jwks_url
-        logger.info("JWKS refreshed url=%s keys=%d", jwks_url, len(keys))
 
 
 _jwks_cache = JWKSCache()
+_discovery_cache = DiscoveryCache()
 
 
-def resolve_jwks_url(issuer: str, explicit: str | None = None) -> str:
+async def resolve_jwks_url(issuer: str, explicit: str | None = None) -> str:
     if explicit:
         return explicit.rstrip("/")
+    try:
+        doc = await _discovery_cache.get(issuer)
+        jwks_uri = doc.get("jwks_uri")
+        if jwks_uri:
+            return str(jwks_uri).rstrip("/")
+    except HTTPException:
+        pass
+    except Exception as e:
+        logger.debug("discovery fallback: %s", e)
     return f"{issuer.rstrip('/')}/.well-known/jwks.json"
 
 
@@ -105,71 +146,36 @@ async def verify_bearer_token(token: str) -> Principal:
     issuer = settings.oidc_issuer
     if not issuer:
         raise HTTPException(500, "OIDC not configured")
-
-    jwks_url = resolve_jwks_url(issuer, settings.oidc_jwks_url)
+    jwks_url = await resolve_jwks_url(issuer, settings.oidc_jwks_url)
     audience = settings.oidc_audience
-
     try:
         header = jwt.get_unverified_header(token)
     except JWTError as e:
         raise HTTPException(401, f"invalid token header: {e}") from e
-
     alg = header.get("alg", "RS256")
     if alg not in DEFAULT_ALGORITHMS:
         raise HTTPException(401, f"disallowed algorithm: {alg}")
-
     kid = header.get("kid")
     jwk = await _jwks_cache.get_key(jwks_url, kid)
     if not jwk:
         raise HTTPException(401, "signing key not found in JWKS")
-
-    options: dict[str, Any] = {
-        "verify_aud": bool(audience),
-        "verify_iss": True,
-        "require_exp": True,
-        "require_iat": False,
-    }
+    options = {"verify_aud": bool(audience), "verify_iss": True, "require_exp": True, "require_iat": False}
     try:
-        claims = jwt.decode(
-            token,
-            jwk,
-            algorithms=list(DEFAULT_ALGORITHMS),
-            audience=audience if audience else None,
-            issuer=issuer.rstrip("/"),
-            options=options,
-        )
+        claims = jwt.decode(token, jwk, algorithms=list(DEFAULT_ALGORITHMS), audience=audience if audience else None, issuer=issuer.rstrip("/"), options=options)
     except JWTError as e:
         try:
-            claims = jwt.decode(
-                token,
-                jwk,
-                algorithms=list(DEFAULT_ALGORITHMS),
-                audience=audience if audience else None,
-                issuer=issuer.rstrip("/") + "/",
-                options=options,
-            )
+            claims = jwt.decode(token, jwk, algorithms=list(DEFAULT_ALGORITHMS), audience=audience if audience else None, issuer=issuer.rstrip("/") + "/", options=options)
         except JWTError:
-            logger.info("JWT validation failed: %s", e)
             raise HTTPException(401, f"token validation failed: {e}") from e
     except JOSEError as e:
         raise HTTPException(401, f"token validation failed: {e}") from e
-
     sub = claims.get("sub")
     if not sub:
         raise HTTPException(401, "token missing sub")
-
-    return Principal(
-        sub=str(sub),
-        email=claims.get("email") or claims.get("preferred_username"),
-        name=claims.get("name"),
-        roles=_roles_from_claims(claims),
-        claims=dict(claims),
-    )
+    return Principal(sub=str(sub), email=claims.get("email") or claims.get("preferred_username"), name=claims.get("name"), roles=_roles_from_claims(claims), claims=dict(claims))
 
 
-async def optional_oidc_principal(
-    authorization: str | None = Header(default=None),
-) -> Principal | None:
+async def optional_oidc_principal(authorization: str | None = Header(default=None)) -> Principal | None:
     settings = get_settings()
     if not settings.oidc_issuer:
         return None
@@ -181,9 +187,7 @@ async def optional_oidc_principal(
     return await verify_bearer_token(token)
 
 
-async def require_oidc_principal(
-    authorization: str | None = Header(default=None),
-) -> Principal:
+async def require_oidc_principal(authorization: str | None = Header(default=None)) -> Principal:
     settings = get_settings()
     if not settings.oidc_issuer:
         raise HTTPException(503, "OIDC not configured (set AEGIS_OIDC_ISSUER)")
@@ -197,3 +201,7 @@ async def require_oidc_principal(
 
 def get_jwks_cache() -> JWKSCache:
     return _jwks_cache
+
+
+def get_discovery_cache() -> DiscoveryCache:
+    return _discovery_cache
