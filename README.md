@@ -1,81 +1,46 @@
 # AEGIS Swarm
 
-**Autonomous Enterprise Guard & Intelligence System** — multi-agent cyber defense platform for **authorized** SOC operations, purple-team validation, threat assessment, and DFIR.
+**Autonomous Enterprise Guard & Intelligence System** — multi-agent cyber defense control plane for **authorized** SOC, detection engineering, DFIR, and purple-team validation.
 
-[![Version](https://img.shields.io/badge/version-0.3.2-blue)](docs/releases/v0.3.0.md)
-[![Agents](https://img.shields.io/badge/agents-63-green)](docs/agents/CATALOG.md)
-[![License](https://img.shields.io/badge/license-Proprietary-red)]()
+![version](https://img.shields.io/badge/version-0.4.2-blue)
 
-> Scope gates, approval lifecycle, and audit logging are mandatory. Red-team agents perform **authorized validation only** — no unauthorized exploitation.
+> **Authorized defensive use only.** Do not use against systems without explicit written permission.
 
-## Status — v0.3.2 (production candidate)
-
-| Layer | Capabilities |
-|-------|----------------|
-| **Agents** | 63 across Command, Blue, Purple, Red (authorized), Intel, DFIR, Reporting |
-| **Control plane** | FastAPI: engagements, dispatch, ingest, audit, metrics, kill-switch |
-| **Auth** | Optional API key and/or **OIDC JWT** (JWKS, RS/ES, key rotation) |
-| **Messaging** | Redis Streams + DLQ + domain partitions |
-| **Storage** | Postgres + Redis cache |
-| **Ingestion** | Syslog, Elastic (live), Sentinel (live), CrowdStrike/Defender stubs |
-| **Analytics** | Risk scoring, NetworkX GraphStore, ATT&CK mapping |
-| **Purple** | Detection validation harness |
-| **Compliance** | NIST CSF + CIS matrix |
-| **Ops** | K8s Deployments, HPA, NetworkPolicy; managed Redis runbook |
-| **Tests** | 48 unit + integration tests |
-
-## Quick start (dev)
+## Quick start (fully operational offline)
 
 ```bash
-git clone https://github.com/Justonejewelry/Aegis-Swarm.git
-cd Aegis-Swarm
-python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-uvicorn aegis.api.main:app --reload --port 8080
+./scripts/run_local.sh
+# API: http://127.0.0.1:8080/health
 ```
 
-API docs: http://localhost:8080/docs
+Uses **SQLite** + in-memory Redis fallback (no Docker required).
 
-### Worker
+### Lab stack
 
 ```bash
+docker compose -f deploy/docker/docker-compose.lab.yml up -d
+```
+
+Lab credentials (`aegis_dev_only`) are **for local lab only — never production**.
+
+### Background workers
+
+```bash
+export PYTHONPATH=src
+export AEGIS_WORKER_DOMAINS="*"
 python -m aegis.messaging.worker
 ```
 
-### Auth (optional)
+## Production checklist
 
-```bash
-export AEGIS_API_KEY=dev-service-key
-export AEGIS_OIDC_ISSUER=https://login.microsoftonline.com/<tenant>/v2.0
-export AEGIS_OIDC_AUDIENCE=api://aegis-swarm
-```
+- `AEGIS_ENV=production` → **fails closed** unless `AEGIS_API_KEY` and/or OIDC is set
+- Optional: `AEGIS_TRUSTED_HOSTS`, `AEGIS_CORS_ORIGINS`, `AEGIS_RATE_LIMIT_PER_MINUTE`
+- `AEGIS_AUDIT_SIGNING_KEY` for signed `/audit/export`
+- Bind behind TLS gateway; restrict `/metrics` and `/redis/status`
 
-## Key endpoints
-
-| Method | Path | Notes |
-|--------|------|--------|
-| `POST` | `/engagements` | Create |
-| `POST` | `/engagements/{id}/approve` | Activate |
-| `POST` | `/engagements/{id}/abort` | Kill-switch |
-| `POST` | `/tasks` | Enqueue agent work |
-| `POST` | `/ingest` | Connectors → bus |
-| `GET` | `/audit` | Audit log |
-| `POST` | `/purple/validate` | Detection harness |
-| `GET` | `/compliance/matrix` | NIST CSF / CIS |
-| `GET` | `/metrics` | Prometheus |
-| `GET` | `/health` | Liveness |
-
-## Documentation
-
-- [Architecture](docs/architecture/OVERVIEW.md) · [Roadmap](docs/architecture/ROADMAP.md) · [OIDC](docs/architecture/OIDC.md)
-- [Agent catalog](docs/agents/CATALOG.md) · [Managed Redis](docs/runbooks/MANAGED_REDIS.md)
-- Releases: [v0.3.0](docs/releases/v0.3.0.md)
-
-## Non-goals
-
-- Unauthorized exploitation or unscoped offensive tooling
-- Multi-region Active-Active Redis before single-region HA is proven
+See [SECURITY.md](SECURITY.md).
 
 ## License
 
-Proprietary — authorized defensive use only.
+Proprietary — see [LICENSE](LICENSE).

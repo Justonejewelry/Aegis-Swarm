@@ -16,32 +16,35 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-
       - name: Install package + dev deps
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-
+          pip install aiosqlite
       - name: Unit + integration tests
         run: pytest -q --tb=short
         env:
           AEGIS_ENV: test
           AEGIS_PERSIST_FINDINGS: "false"
           AEGIS_PERSIST_AUDIT: "false"
-
+      - name: SQLite persistence smoke
+        run: pytest -q tests/unit/test_storage.py tests/unit/test_evidence_chain.py tests/unit/test_auth_production.py --tb=short
+        env:
+          AEGIS_ENV: test
+          AEGIS_DB_MODE: sqlite
+          AEGIS_SQLITE_PATH: /tmp/aegis-ci.db
+          AEGIS_PERSIST_FINDINGS: "true"
+          AEGIS_PERSIST_AUDIT: "true"
       - name: Ruff lint
         run: ruff check src tests
-
       - name: Import smoke
         run: |
           python -c "from aegis.api.main import app; print('routes', len(app.routes))"
           python -c "from aegis.core.registry import build_default_agents; print('agents', len(build_default_agents()))"
-
   docker-build:
     runs-on: ubuntu-latest
     needs: test

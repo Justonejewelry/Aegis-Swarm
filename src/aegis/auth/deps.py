@@ -7,6 +7,10 @@ from aegis.auth.oidc import Principal, verify_bearer_token
 from aegis.core.settings import get_settings
 
 
+def _is_production(settings) -> bool:
+    return (settings.env or "").lower() in {"prod", "production"}
+
+
 async def require_auth(
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),
     authorization: str | None = Header(default=None),
@@ -14,14 +18,23 @@ async def require_auth(
     settings = get_settings()
     api_key = settings.api_key
     oidc_on = bool(settings.oidc_issuer)
+
     if not api_key and not oidc_on:
+        if _is_production(settings):
+            raise HTTPException(
+                503,
+                "auth not configured: set AEGIS_API_KEY and/or AEGIS_OIDC_ISSUER in production",
+            )
         return None
+
     if api_key and x_api_key and x_api_key == api_key:
         return None
+
     if oidc_on and authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(" ", 1)[1].strip()
         if token:
             return await verify_bearer_token(token)
+
     if api_key and not oidc_on:
         raise HTTPException(401, "invalid or missing X-API-Key")
     if oidc_on and not api_key:

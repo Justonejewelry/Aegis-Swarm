@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Fully operational local mode (SQLite + in-memory Redis fallback)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export PYTHONPATH="$ROOT/src"
