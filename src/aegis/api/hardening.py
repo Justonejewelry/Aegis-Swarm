@@ -12,6 +12,15 @@ from starlette.responses import JSONResponse, PlainTextResponse
 
 from aegis.core.settings import get_settings
 
+_DEV_ORIGINS = [
+    "http://127.0.0.1:8765",
+    "http://localhost:8765",
+    "http://127.0.0.1:8080",
+    "http://localhost:8080",
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
+]
+
 
 class BodySizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -53,7 +62,15 @@ def apply_hardening(app: FastAPI) -> None:
     hosts = [h.strip() for h in (settings.trusted_hosts or "").split(",") if h.strip()]
     if hosts:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
+
     origins = [o.strip() for o in (settings.cors_origins or "").split(",") if o.strip()]
+    env = (settings.env or "development").lower()
+    # Dev: always allow console (8765) + local API origins unless production
+    if env not in {"prod", "production"}:
+        for o in _DEV_ORIGINS:
+            if o not in origins:
+                origins.append(o)
+
     if origins:
         app.add_middleware(
             CORSMiddleware,
