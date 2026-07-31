@@ -1,11 +1,12 @@
-"""Repository helpers for durable AEGIS state (engagements, findings, audit)."""
+"""Repository helpers for durable AEGIS state (engagements, findings, audit, evidence)."""
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from aegis.core.models import (
@@ -260,7 +261,7 @@ class AgentRegistryRepository:
         self,
         agent_id: str,
         domain: str,
-        version: str = "0.2.1",
+        version: str = "0.4.2",
         status: str = "registered",
         meta: dict[str, Any] | None = None,
     ) -> AgentRegistryRow:
@@ -295,3 +296,92 @@ class AgentRegistryRepository:
             .where(AgentRegistryRow.agent_id == agent_id)
             .values(last_heartbeat=datetime.now(timezone.utc))
         )
+
+
+class EvidenceRepository:
+    """Persist DFIR evidence chain rows to Postgres."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def upsert_record(self, rec: Any) -> None:
+        await self.session.execute(
+            text(
+                """
+                INSERT INTO evidence_chain (
+                    evidence_id, engagement_id, label, content_hash, algo,
+                    source, media_type, size_bytes, collected_by, prev_hash,
+                    chain_hash, created_at, meta
+                ) VALUES (
+                    :evidence_id, :engagement_id, :label, :content_hash, :algo,
+                    :source, :media_type, :size_bytes, :collected_by, :prev_hash,
+                    :chain_hash, CAST(:created_at AS TIMESTAMPTZ), CAST(:meta AS jsonb)
+                )
+                ON CONFLICT (evidence_id) DO UPDATE SET
+                    content_hash = EXCLUDED.content_hash,
+                    chain_hash = EXCLUDED.chain_hash,
+                    prev_hash = EXCLUDED.prev_hash,
+                    meta = EXCLUDED.meta
+                """
+            ),
+            {
+                "evidence_id": rec.evidence_id,
+                "engagement_id": rec.engagement_id,
+                "label": rec.label,
+                "content_hash": rec.content_hash,
+                "algo": rec.algo,
+                "source": rec.source,
+                "media_type": rec.media_type,
+                "size_bytes": rec.size_bytes,
+                "collected_by": rec.collected_by,
+                "prev_hash": rec.prev_hash,
+                "chain_hash": rec.chain_hash,
+                "created_at": rec.created_at,
+                "meta": json.dumps(rec.meta or {}),
+            },
+        )
+        await self.session.flush()
+
+    async def list_for_engagement(
+        self, engagement_id: UUID | str, limit: int = 500
+    ) -> list[dict[str, Any]]:
+        result = await self.session.execute(
+            text(
+                """
+                SELECT evidence_id, engagement_id, label, content_hash, algo, source,
+                       media_type, size_bytes, collected_by, prev_hash, chain_hash,
+                       created_at, meta
+                FROM evidence_chain
+                WHERE engagement_id = :eng
+                ORDER BY created_at ASC
+                LIMIT :lim
+                """
+            ),
+            {"eng": str(engagement_id), "lim": limit},
+        )
+        rows = []
+        for r in result.mappings():
+            meta = r["meta"] or {}
+            if isinstance(meta, str):
+                try:
+                    meta = json.loads(meta)
+                except Exception:
+                    meta = {}
+            rows.append(
+                {
+                    "evidence_id": str(r["evidence_id"]),
+                    "engagement_id": str(r["engagement_id"]),
+                    "label": r["label"],
+                    "content_hash": r["content_hash"],
+                    "algo": r["algo"],
+                    "source": r["source"],
+                    "media_type": r["media_type"],
+                    "size_bytes": r["size_bytes"],
+                    "collected_by": r["collected_by"],
+                    "prev_hash": r["prev_hash"],
+                    "chain_hash": r["chain_hash"],
+                    "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                    "meta": meta,
+                }
+            )
+        return rows
