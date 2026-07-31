@@ -3,43 +3,57 @@
 **Autonomous Enterprise Guard & Intelligence System** — multi-agent cyber defense control plane for **authorized** SOC, detection engineering, DFIR, and purple-team validation.
 
 ![version](https://img.shields.io/badge/version-0.4.2-blue)
+![status](https://img.shields.io/badge/release-v0.4.2%20beta-green)
 
 > **Authorized defensive use only.** Do not use against systems without explicit written permission.
 
-## Quick start (fully operational offline)
+**First public beta: [v0.4.2](docs/releases/v0.4.2.md)** · [SECURITY](SECURITY.md) · [LICENSE](LICENSE)
+
+## Quick start
 
 ```bash
 pip install -e ".[dev]"
 ./scripts/run_local.sh
-# API: http://127.0.0.1:8080/health
+# API: http://127.0.0.1:8080/docs
+
+python3 console/launcher.py
+# 3D console: http://127.0.0.1:8765/
 ```
 
-Uses **SQLite** + in-memory Redis fallback (no Docker required).
-
-### Lab stack
+Lab stack (optional):
 
 ```bash
 docker compose -f deploy/docker/docker-compose.lab.yml up -d
 ```
 
-Lab credentials (`aegis_dev_only`) are **for local lab only — never production**.
+Lab credentials (`aegis_dev_only`) are **not for production**.
 
-### Background workers
+## 3D Operator Console
 
 ```bash
-export PYTHONPATH=src
-export AEGIS_WORKER_DOMAINS="*"
-python -m aegis.messaging.worker
+cd console && ./build_console.sh
+./dist/AEGIS-Console
 ```
 
-## Production checklist
+See [console/README.md](console/README.md).
 
-- `AEGIS_ENV=production` → **fails closed** unless `AEGIS_API_KEY` and/or OIDC is set
-- Optional: `AEGIS_TRUSTED_HOSTS`, `AEGIS_CORS_ORIGINS`, `AEGIS_RATE_LIMIT_PER_MINUTE`
-- `AEGIS_AUDIT_SIGNING_KEY` for signed `/audit/export`
-- Bind behind TLS gateway; restrict `/metrics` and `/redis/status`
+## Production
 
-See [SECURITY.md](SECURITY.md).
+```bash
+export AEGIS_ENV=production
+export AEGIS_API_KEY='…'   # or configure OIDC
+export AEGIS_AUDIT_SIGNING_KEY='…'
+```
+
+Production **fails closed** if neither API key nor OIDC is set.
+
+## Capabilities
+
+- 63 specialized agents
+- Engagement approve/abort gates
+- Redis Streams + Sentinel metrics
+- Evidence chain, ATT&CK coverage, signed audit, HTML reports
+- SQLite offline or Postgres
 
 ## License
 
