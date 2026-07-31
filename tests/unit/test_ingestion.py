@@ -1,14 +1,13 @@
+"""Ingestion connectors and pipeline tests."""
+from __future__ import annotations
+
+from uuid import uuid4
+
 import pytest
 
-from aegis.ingestion.connectors import (
-    CrowdStrikeConnector,
-    DefenderConnector,
-    ElasticConnector,
-    IngestionPipeline,
-    SentinelConnector,
-    SyslogConnector,
-    build_default_pipeline,
-)
+from aegis.ingestion.connectors import ElasticConnector, SentinelConnector, SyslogConnector
+from aegis.ingestion.pipeline import IngestionPipeline
+from aegis.messaging.bus import TaskBus, stream_for_domain
 
 
 @pytest.mark.asyncio
@@ -25,23 +24,31 @@ async def test_syslog_and_pipeline():
 
 
 @pytest.mark.asyncio
-async def test_crowdstrike_and_defender():
-    cs = CrowdStrikeConnector(
-        detections=[{"device": {"hostname": "laptop1"}, "max_severity_displayname": "High", "user_name": "bob"}]
-    )
-    defn = DefenderConnector(alerts=[{"deviceName": "ws02", "severity": "medium", "userPrincipalName": "carol@corp"}])
-    events = await IngestionPipeline([cs, defn]).collect()
-    assert len(events) == 2
-    assert events[0]["source"] == "crowdstrike:falcon"
-    assert events[1]["source"] == "defender:xdr"
-    assert events[0]["host"] == "laptop1"
+async def test_pipeline_enqueue_to_bus():
+    syslog = SyslogConnector()
+    syslog.ingest_line("critical alert", host="fw1")
+    syslog.buffer.append({"message": "boom", "severity": "critical", "host": "fw1"})
+    pipe = IngestionPipeline([syslog])
+    bus = TaskBus()
+    await bus.connect()
+    eid = uuid4()
+    result = await pipe.collect_and_enqueue(engagement_id=eid, bus=bus, domain="blue")
+    assert result["enqueued"] >= 1
+    assert result["task_ids"]
+    tasks = await bus.dequeue("test-worker", count=10)
+    assert any(t.get("domain") == "blue" for t in tasks)
+
+
+def test_stream_for_domain():
+    assert stream_for_domain(None) == "aegis:tasks"
+    assert stream_for_domain("blue") == "aegis:tasks:blue"
+    assert stream_for_domain("intel") == "aegis:tasks:intel"
+    assert stream_for_domain("unknown-xyz") == "aegis:tasks"
 
 
 @pytest.mark.asyncio
-async def test_build_default_pipeline():
-    pipe = build_default_pipeline(
-        syslog_buffer=[{"message": "test"}],
-        elastic_hits=[{"_source": {"message": "e"}}],
-    )
-    events = await pipe.collect()
-    assert len(events) >= 2
+async def test_elastic_normalizes_injected_hits():
+    c = ElasticConnector(hits=[{"_source": {"message": "x", "host": {"name": "h1"}, "log": {"level": "Warning"}}}])
+    events = await c.fetch(limit=10)
+    assert len(events) == 1
+    assert events[0]["host"] == "h1"
