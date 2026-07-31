@@ -1,1 +1,105 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AEGIS Console</title>
+<style>
+:root{--bg:#070b12;--elev:#0e1520;--line:#1e2a3c;--text:#e8eef7;--muted:#8b9bb4;--accent:#3b9eff;--ok:#34d399;--bad:#f87171}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;font-family:system-ui,sans-serif;background:#070b12;color:var(--text)}
+.app{display:grid;grid-template-columns:200px 1fr 280px;grid-template-rows:56px 1fr 52px;height:100vh}
+@media(max-width:900px){.app{grid-template-columns:1fr;grid-template-rows:56px auto 1fr auto 52px}.side{display:flex;flex-wrap:wrap}.right{max-height:36vh}}
+.top{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:#0a1018}
+.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3b9eff,#1d4ed8);display:inline-block;margin-right:8px;vertical-align:middle}
+.badge{font-size:11px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}.badge.ok{color:var(--ok)}.badge.bad{color:var(--bad)}
+.btn{background:var(--elev);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer;font-size:12px;margin-left:6px}.btn.p{background:#1d4ed8;border-color:#3b82f6}
+.side{background:#0c121c;border-right:1px solid var(--line);padding:10px}.nav{padding:10px;border-radius:8px;color:var(--muted);cursor:pointer;font-size:13px;margin-bottom:2px}.nav.on,.nav:hover{background:rgba(59,158,255,.12);color:var(--accent)}
+.main{position:relative;padding:16px}.card{background:var(--elev);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+.right{background:#0c121c;border-left:1px solid var(--line);padding:14px;overflow:auto;font-size:13px}
+.bot{grid-column:1/-1;display:flex;gap:16px;align-items:center;padding:0 16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;background:var(--muted)}.dot.on{background:var(--ok)}.dot.off{background:var(--bad)}
+.muted{color:var(--muted)}.list{padding:8px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;cursor:pointer}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center}.modal.on{display:grid}
+.box{width:min(400px,92vw);background:#101826;border:1px solid var(--line);border-radius:14px;padding:18px}
+.field{margin:10px 0}.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;background:#0a1018;border:1px solid var(--line);color:var(--text);padding:10px;border-radius:8px}
+.help{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;justify-content:flex-end}.help.on{display:flex}
+.hp{width:min(420px,100%);background:#0c121c;padding:20px;overflow:auto;border-left:1px solid var(--accent)}
+.toast{position:fixed;bottom:70px;right:16px;background:#122033;border:1px solid var(--accent);padding:12px;border-radius:10px;display:none;font-size:12px}.toast.on{display:block}
+</style></head><body>
+<div class="app">
+<header class="top">
+<div><span class="logo"></span><b>AEGIS</b> <span class="muted">Console</span></div>
+<div><span class="badge" id="hb">Checking…</span>
+<button class="btn" id="ref">Refresh</button>
+<button class="btn p" id="ne">New Engagement</button>
+<button class="btn" id="he">Help</button></div>
+</header>
+<nav class="side">
+<div class="nav on" data-v="home">Home</div>
+<div class="nav" data-v="eng">Engagements</div>
+<div class="nav" data-v="agents">Helpers</div>
+<div class="nav" data-v="disp">Send work</div>
+<div class="nav" data-v="atk">Coverage map</div>
+</nav>
+<main class="main">
+<div class="card"><h3 style="margin:0 0 8px">Workspace</h3>
+<p class="muted">Helpers: <b id="sa">—</b> · Engagements: <b id="se">—</b></p>
+<p class="muted" id="rh" style="margin-top:8px">Memory service: …</p>
+<div id="vp" style="margin-top:12px"></div>
+</div>
+</main>
+<aside class="right">
+<div class="card"><b id="ct">No engagement selected</b><div class="muted" id="cm">Create one to begin</div></div>
+<div class="card" id="fl" class="muted">Findings appear after you send work.</div>
+<button class="btn" style="width:100%;margin-bottom:6px" id="ap">Approve</button>
+<button class="btn" style="width:100%;margin-bottom:6px" id="ab">Abort</button>
+<button class="btn p" style="width:100%" id="rp">Open report</button>
+</aside>
+<footer class="bot"><span><span class="dot" id="da"></span>Engine</span><span><span class="dot" id="dr"></span>Memory</span><span>Authorized use only</span></footer>
+</div>
+<div class="help" id="ho"><div class="hp"><button class="btn" id="hc" style="float:right">Close</button>
+<h2>Help</h2>
+<p class="muted">Keep the Engine window open. Flow: New Engagement → Approve → Send work → Review findings.</p>
+<p class="muted">If the page cannot connect, restart <code>./scripts/run_local.sh</code> and this Console.</p>
+<p class="muted">See onboarding PDFs for step-by-step fixes in plain English.</p>
+</div></div>
+<div class="modal" id="me"><div class="box"><h3>New engagement</h3>
+<div class="field"><label>Name</label><input id="en" value="Morning check"/></div>
+<div class="field"><label>Mode</label><select id="em"><option>assess</option><option>hunt</option><option>purple</option></select></div>
+<div style="text-align:right"><button class="btn" id="ec">Cancel</button><button class="btn p" id="ek">Create</button></div></div></div>
+<div class="modal" id="md"><div class="box"><h3>Send work</h3>
+<div class="field"><label>Helper</label><select id="dag"></select></div>
+<div class="field"><label>Request</label><textarea id="dp" rows="4">{"query":"hunt","hits":[{"host":"dc01","mitre":["T1059.001"]}]}</textarea></div>
+<div style="text-align:right"><button class="btn" id="dc">Cancel</button><button class="btn p" id="ds">Send</button></div></div></div>
+<div class="toast" id="to"></div>
+<script>
+const API=localStorage.getItem('aegis_api')||'http://127.0.0.1:8080';
+const S={agents:[],engs:[],sel:null,view:'home'};
+function toast(m){const e=document.getElementById('to');e.textContent=m;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),3000)}
+async function api(p,o={}){const h={'Content-Type':'application/json'};const k=localStorage.getItem('aegis_api_key');if(k)h['X-API-Key']=k;const r=await fetch(API+p,{...o,headers:{...h,...(o.headers||{})}});if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,100));const c=r.headers.get('content-type')||'';return c.includes('json')?r.json():r.text()}
+async function refresh(){try{const h=await api('/health');document.getElementById('hb').textContent='Connected · '+(h.agents||0)+' helpers';document.getElementById('hb').className='badge ok';document.getElementById('da').className='dot on';document.getElementById('sa').textContent=h.agents;document.getElementById('se').textContent=h.engagements_in_memory??'—'}catch(e){document.getElementById('hb').textContent='Engine offline';document.getElementById('hb').className='badge bad';document.getElementById('da').className='dot off';toast('Cannot reach Engine')}
+try{S.agents=await api('/agents');document.getElementById('sa').textContent=S.agents.length}catch(_){}
+try{S.engs=await api('/engagements');document.getElementById('se').textContent=S.engs.length}catch(_){}
+try{const r=await api('/redis/status');document.getElementById('rh').textContent='Memory service: '+(r.connected?'Online':'Offline (OK for local use)');document.getElementById('dr').className=r.connected?'dot on':'dot off'}catch(_){document.getElementById('rh').textContent='Memory service: Offline (OK)';document.getElementById('dr').className='dot off'}
+render()}
+async function select(id){S.sel=id;const e=S.engs.find(x=>x.engagement_id===id)||{};document.getElementById('ct').textContent=e.name||id;document.getElementById('cm').textContent=(e.status||'')+' · '+(e.mode||'');
+try{const d=await api('/engagements/'+id);const f=d.findings||[];document.getElementById('fl').innerHTML=f.slice(0,8).map(x=>'<div class="list"><span>'+(x.title||'')+'</span><span class="muted">'+(x.severity||'')+'</span></div>').join('')||'<span class="muted">No findings yet.</span>'}catch(e){document.getElementById('fl').textContent=e.message}}
+function render(){const vp=document.getElementById('vp');
+if(S.view==='home'){vp.innerHTML='<p class="muted">Create an engagement, approve it, then send work. Open Help anytime.</p>';return}
+if(S.view==='eng'){vp.innerHTML='<b>Engagements</b>'+(S.engs.map(e=>'<div class="list" data-id="'+e.engagement_id+'"><span><b>'+e.name+'</b> · '+e.status+'</span><span class="muted">'+e.mode+'</span></div>').join('')||'<p class="muted">None yet.</p>');vp.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>select(el.dataset.id))}
+else if(S.view==='agents')vp.innerHTML='<b>Helpers</b>'+S.agents.slice(0,40).map(a=>'<div class="list"><span>'+(a.agent_id||a.id)+'</span><span class="muted">'+(a.domain||'')+'</span></div>').join('')
+else if(S.view==='disp'){if(!S.sel){vp.innerHTML='<p class="muted">Select and approve an engagement first.</p>';return}document.getElementById('dag').innerHTML=S.agents.map(a=>'<option value="'+(a.agent_id||a.id)+'">'+(a.agent_id||a.id)+'</option>').join('');document.getElementById('md').classList.add('on')}
+else if(S.view==='atk'){const q=S.sel?('?engagement_id='+S.sel):'';api('/attack/coverage'+q).then(m=>{vp.innerHTML='<b>Coverage '+m.coverage_pct+'%</b>'+(m.matrix||[]).slice(0,15).map(r=>'<div class="list"><span>'+r.technique_id+' '+r.name+'</span><span class="muted">'+r.status+'</span></div>').join('')}).catch(e=>vp.textContent=e.message)}
+}
+document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('on'));n.classList.add('on');S.view=n.dataset.v;render()});
+document.getElementById('ref').onclick=()=>refresh().then(()=>toast('Updated'));
+document.getElementById('he').onclick=()=>document.getElementById('ho').classList.add('on');
+document.getElementById('hc').onclick=()=>document.getElementById('ho').classList.remove('on');
+document.getElementById('ne').onclick=()=>document.getElementById('me').classList.add('on');
+document.getElementById('ec').onclick=()=>document.getElementById('me').classList.remove('on');
+document.getElementById('ek').onclick=async()=>{try{const body={name:document.getElementById('en').value,mode:document.getElementById('em').value,scope:{in_scope_cidrs:['10.0.0.0/8'],in_scope_domains:[],in_scope_assets:[],out_of_scope:[],allowed_validation_actions:['passive_recon','config_review','detection_test']}};const eng=await api('/engagements',{method:'POST',body:JSON.stringify(body)});document.getElementById('me').classList.remove('on');toast('Created');await refresh();select(eng.engagement_id)}catch(e){toast(e.message)}};
+document.getElementById('dc').onclick=()=>document.getElementById('md').classList.remove('on');
+document.getElementById('ds').onclick=async()=>{try{const payload=JSON.parse(document.getElementById('dp').value);await api('/dispatch',{method:'POST',body:JSON.stringify({engagement_id:S.sel,recipient:document.getElementById('dag').value,payload})});document.getElementById('md').classList.remove('on');toast('Sent');select(S.sel)}catch(e){toast(e.message)}};
+document.getElementById('ap').onclick=async()=>{if(!S.sel)return toast('Select an engagement first');try{await api('/engagements/'+S.sel+'/approve?approver=soc-lead',{method:'POST'});toast('Approved');refresh()}catch(e){toast(e.message)}};
+document.getElementById('ab').onclick=async()=>{if(!S.sel)return toast('Select an engagement first');try{await api('/engagements/'+S.sel+'/abort?reason=console',{method:'POST'});toast('Aborted');refresh()}catch(e){toast(e.message)}};
+document.getElementById('rp').onclick=()=>{if(!S.sel)return toast('Select an engagement first');window.open(API+'/engagements/'+S.sel+'/report','_blank')};
+refresh();setInterval(refresh,15000);
+</script></body></html>
