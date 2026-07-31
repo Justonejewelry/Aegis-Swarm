@@ -1,16 +1,17 @@
 # Changelog
 
+## [0.3.1] — 2026-07-30
+
+### Added
+- **Real JWKS OIDC verification** (`aegis.auth.oidc`): RS/ES JWT validate, JWKS cache + rotation refresh
+- Combined `require_auth` dependency (API key **or** Bearer)
+- Docs: `docs/architecture/OIDC.md`
+- Tests: valid/expired/wrong-aud/unknown-kid + API key path
+
 ## [0.3.0] — 2026-07-30
 
 ### Added (roadmap 11–20)
-- K8s worker Deployment, HPA, NetworkPolicy, ConfigMap
-- Managed Redis runbook; mTLS notes
-- GraphStore load_from_db + persist/load API
-- Purple DetectionValidationHarness + POST /purple/validate
-- ReportScheduler + POST /reports/schedule|tick
-- OIDC principal stub; NIST CSF / CIS compliance matrix
-- Chaos tests (Redis unavailable)
-- docs/releases/v0.3.0.md — production candidate
+- K8s worker Deployment, HPA, NetworkPolicy; managed Redis runbook; GraphStore load; purple harness; report scheduler; NIST/CIS compliance; chaos tests; production candidate
 
 ## [0.2.3] — 2026-07-30
 
@@ -22,11 +23,6 @@
 ### Added
 - Redis factory, kill-switch, metrics, ROADMAP
 
-## [0.2.1] — 2026-07-30
-
-### Added
-- Redis cache, Postgres engagement wiring
-
 ## [0.2.0] — 2026-07-30
 
 ### Added
@@ -35,4 +31,4 @@
 ## [0.1.0] — 2026-07-30
 
 ### Added
-- Core multi-agent control plane, Docker/K8s starters, CI
+- Core multi-agent control plane
