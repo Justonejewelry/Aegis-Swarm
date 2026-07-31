@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aegis-workers
+  namespace: aegis
+  labels:
+    app: aegis-workers
+    aegis.domain: workers
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aegis-workers
+  template:
+    metadata:
+      labels:
+        app: aegis-workers
+        aegis.domain: workers
+    spec:
+      containers:
+        - name: worker
+          image: aegis-swarm/api:0.3.0
+          command: ["python", "-m", "aegis.messaging.worker"]
+          envFrom:
+            - secretRef:
+                name: aegis-secrets
+                optional: true
+            - configMapRef:
+                name: aegis-config
+                optional: true
+          env:
+            - name: AEGIS_ENV
+              value: production
+            - name: AEGIS_WORKER_DOMAINS
+              value: "*"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

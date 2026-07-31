@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aegis-config
+  namespace: aegis
+data:
+  AEGIS_REDIS_MODE: "standalone"
+  AEGIS_ENABLE_CACHE: "true"
+  AEGIS_ENABLE_METRICS: "true"
+  AEGIS_PERSIST_FINDINGS: "true"
+  AEGIS_PERSIST_AUDIT: "true"
