@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="AEGIS_", env_file=".env", extra="ignore")
 
     env: str = "development"
-    database_url: str = "postgresql+asyncpg://aegis:aegis_dev_only@localhost:5432/aegis"
+    database_url: str = "sqlite+aiosqlite:///./data/aegis.db"
     redis_url: str = "redis://localhost:6379/0"
     redis_mode: Literal["standalone", "sentinel", "cluster"] = "standalone"
     redis_sentinels: str | None = None
@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     cache_findings_ttl: int = 120
     enable_metrics: bool = True
     api_key: str | None = None
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
+    oidc_jwks_url: str | None = None
+    oidc_approver_roles: str = "soc-lead,admin,approver"
+    audit_signing_key: str | None = None
+    trusted_hosts: str = ""
+    cors_origins: str = ""
+    rate_limit_per_minute: int = 0
+    max_request_body_bytes: int = 2_000_000
 
 
 @lru_cache
