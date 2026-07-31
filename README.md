@@ -1,28 +1,28 @@
 # AEGIS Swarm
 
-[![Release](https://img.shields.io/github/v/release/Justonejewelry/Aegis-Swarm?include_prereleases&style=flat-square)](https://github.com/Justonejewelry/Aegis-Swarm/releases)
-[![CI](https://img.shields.io/github/actions/workflow/status/Justonejewelry/Aegis-Swarm/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Justonejewelry/Aegis-Swarm/actions)
-[![License](https://img.shields.io/badge/license-Proprietary-lightgrey?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)](https://www.python.org/)
-[![Agents](https://img.shields.io/badge/agents-63%20implemented%20%2F%2064%20catalog-purple?style=flat-square)](docs/agents/CATALOG.md)
+**Autonomous Enterprise Guard & Intelligence System** — multi-agent cyber defense platform for **authorized** SOC operations, purple-team validation, threat assessment, and DFIR.
 
-**Autonomous Enterprise Guard & Intelligence System**
+[![Version](https://img.shields.io/badge/version-0.3.2-blue)](docs/releases/v0.3.0.md)
+[![Agents](https://img.shields.io/badge/agents-63-green)](docs/agents/CATALOG.md)
+[![License](https://img.shields.io/badge/license-Proprietary-red)]()
 
-Enterprise-grade multi-agent AI platform for authorized cyber defense, threat assessment, purple-team validation, detection engineering, DFIR support, and executive risk reporting.
+> Scope gates, approval lifecycle, and audit logging are mandatory. Red-team agents perform **authorized validation only** — no unauthorized exploitation.
 
-> **Scope boundary:** AEGIS operates only within approved engagement scopes, produces immutable audit logs, and prioritizes defensive outcomes and remediation. Offensive validation agents perform *authorized control validation and adversary emulation planning* — not unauthorized exploitation.
+## Status — v0.3.2 (production candidate)
 
-## Capabilities
-
-| Domain | Role |
-|--------|------|
-| **Command** | Mission control, orchestration, scheduling, health |
-| **Blue Team** | SOC analytics, detection, hunting, IR coordination |
-| **Threat Intel** | IOC/TTP fusion, ATT&CK mapping, CVE intelligence |
-| **DFIR** | Timeline, artifacts, reconstruction, root cause |
-| **Purple Team** | Detection & control validation, coverage gaps |
-| **Red Team (Authorized)** | Attack-surface & path modeling, control validation |
-| **Reporting** | Executive, technical, compliance, risk prioritization |
+| Layer | Capabilities |
+|-------|----------------|
+| **Agents** | 63 across Command, Blue, Purple, Red (authorized), Intel, DFIR, Reporting |
+| **Control plane** | FastAPI: engagements, dispatch, ingest, audit, metrics, kill-switch |
+| **Auth** | Optional API key and/or **OIDC JWT** (JWKS, RS/ES, key rotation) |
+| **Messaging** | Redis Streams + DLQ + domain partitions |
+| **Storage** | Postgres + Redis cache |
+| **Ingestion** | Syslog, Elastic (live), Sentinel (live), CrowdStrike/Defender stubs |
+| **Analytics** | Risk scoring, NetworkX GraphStore, ATT&CK mapping |
+| **Purple** | Detection validation harness |
+| **Compliance** | NIST CSF + CIS matrix |
+| **Ops** | K8s Deployments, HPA, NetworkPolicy; managed Redis runbook |
+| **Tests** | 48 unit + integration tests |
 
 ## Quick start (dev)
 
@@ -31,50 +31,51 @@ git clone https://github.com/Justonejewelry/Aegis-Swarm.git
 cd Aegis-Swarm
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-docker compose -f deploy/docker/docker-compose.yml up -d
 uvicorn aegis.api.main:app --reload --port 8080
 ```
 
 API docs: http://localhost:8080/docs
 
-## Current status (v0.2.1)
-
-- **63 agents** registered · Redis Streams + DLQ + worker
-- **PostgreSQL storage** for engagements, findings, audit
-- **GraphStore** (NetworkX) shared by attack-path & privilege-graph agents
-- HTML executive report + Streamlit dashboard + Grafana stubs
-- 5 ingestion connectors (Syslog, Elastic, Sentinel, CrowdStrike, Defender)
-- 17 unit tests passing
-
-## Task bus & workers
+### Worker
 
 ```bash
-# Terminal A — API
-uvicorn aegis.api.main:app --port 8080
-
-# Terminal B — worker (Redis if available, else in-memory)
 python -m aegis.messaging.worker
 ```
 
-Enqueue: `POST /tasks` with `engagement_id`, `recipient`, `payload`.
+### Auth (optional)
+
+```bash
+export AEGIS_API_KEY=dev-service-key
+export AEGIS_OIDC_ISSUER=https://login.microsoftonline.com/<tenant>/v2.0
+export AEGIS_OIDC_AUDIENCE=api://aegis-swarm
+```
+
+## Key endpoints
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `POST` | `/engagements` | Create |
+| `POST` | `/engagements/{id}/approve` | Activate |
+| `POST` | `/engagements/{id}/abort` | Kill-switch |
+| `POST` | `/tasks` | Enqueue agent work |
+| `POST` | `/ingest` | Connectors → bus |
+| `GET` | `/audit` | Audit log |
+| `POST` | `/purple/validate` | Detection harness |
+| `GET` | `/compliance/matrix` | NIST CSF / CIS |
+| `GET` | `/metrics` | Prometheus |
+| `GET` | `/health` | Liveness |
 
 ## Documentation
 
-- [Architecture](docs/architecture/OVERVIEW.md)
-- [Agent catalog](docs/agents/CATALOG.md)
-- [Agent contract](docs/agents/CONTRACT.md)
-- [Threat assessment methodology](docs/architecture/THREAT_ASSESSMENT.md)
-- [ATT&CK coverage model](docs/architecture/ATTACK_COVERAGE.md)
-- [Risk scoring](docs/architecture/RISK_SCORING.md)
-- [Deployment guide](docs/architecture/DEPLOYMENT.md)
-- [v0.2.1 / v0.2.0 release notes](docs/releases/v0.2.0.md)
-- [v0.1.0 release notes](docs/releases/v0.1.0.md)
-- [Runbooks](docs/runbooks/)
+- [Architecture](docs/architecture/OVERVIEW.md) · [Roadmap](docs/architecture/ROADMAP.md) · [OIDC](docs/architecture/OIDC.md)
+- [Agent catalog](docs/agents/CATALOG.md) · [Managed Redis](docs/runbooks/MANAGED_REDIS.md)
+- Releases: [v0.3.0](docs/releases/v0.3.0.md)
 
-## Topics
+## Non-goals
 
-`cybersecurity` · `soc` · `purple-team` · `threat-hunting` · `mitre-attack` · `multi-agent` · `fastapi` · `dfir`
+- Unauthorized exploitation or unscoped offensive tooling
+- Multi-region Active-Active Redis before single-region HA is proven
 
 ## License
 
-Proprietary / enterprise — configure for your organization. Authorized use only.
+Proprietary — authorized defensive use only.
