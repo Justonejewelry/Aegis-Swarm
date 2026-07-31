@@ -61,6 +61,15 @@ services:
       api:
         condition: service_started
 
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+
   grafana:
     image: grafana/grafana:11.1.0
     ports:
@@ -70,9 +79,10 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - ../../deploy/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../../deploy/grafana/aegis-overview.json:/var/lib/grafana/dashboards/aegis-overview.json:ro
+      - ../../deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - postgres
+      - prometheus
 
 volumes:
   pgdata:

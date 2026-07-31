@@ -1,5 +1,4 @@
-# Lab: Postgres + Redis Sentinel + Elastic + API + worker + Grafana
-# docker compose -f deploy/docker/docker-compose.lab.yml up -d
+# Lab: Postgres + Redis Sentinel + Elastic + Prometheus + Grafana + API/worker
 services:
   postgres:
     image: postgres:16-alpine
@@ -39,7 +38,6 @@ services:
         port 26379
         sentinel monitor aegis-master redis-master 6379 2
         sentinel down-after-milliseconds aegis-master 5000
-        sentinel failover-timeout aegis-master 10000
         CONF
         redis-sentinel /tmp/sentinel.conf
     depends_on: [redis-master]
@@ -74,11 +72,6 @@ services:
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports: ["9200:9200"]
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
   api:
     build:
       context: ../..
@@ -108,6 +101,12 @@ services:
       AEGIS_REDIS_MASTER_NAME: aegis-master
       AEGIS_WORKER_DOMAINS: "*"
     depends_on: [api]
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    ports: ["9090:9090"]
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on: [api]
   grafana:
     image: grafana/grafana:11.1.0
     ports: ["3000:3000"]
@@ -116,5 +115,8 @@ services:
     volumes:
       - ../grafana/provisioning:/etc/grafana/provisioning:ro
       - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+      - api
 volumes:
   lab_pgdata:
