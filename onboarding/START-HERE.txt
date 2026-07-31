@@ -1,0 +1,43 @@
+AEGIS Swarm — Start Here
+========================
+
+Welcome. Short text version of the onboarding pack.
+
+1) Open the Aegis-Swarm folder on your computer.
+
+2) In Terminal:
+   cd ~/Aegis-Swarm
+   git pull origin main
+
+3) Start the Engine (leave this window open):
+   ./scripts/run_local.sh
+
+   You should see: running on http://127.0.0.1:8080
+
+4) Open a second Terminal window and start the Console:
+   cd ~/Aegis-Swarm
+   python3 console/launcher.py
+
+5) Open the Console in your browser:
+   http://127.0.0.1:8765
+
+6) First practice (2 minutes):
+   - Click New Engagement
+   - Select it, click Approve
+   - Open Send work, send the sample request
+   - Check findings on the right side
+
+If the page says the site cannot be reached, the Engine or Console
+window was closed. Start them again from steps 3 and 4.
+
+Redis / Memory messages about connection refused are normal if Redis
+is not installed. The product still works offline.
+
+PDF guides (in your local onboarding pack):
+  00-Onboarding-Overview.pdf
+  01-Getting-Started.pdf
+  02-Using-the-Console.pdf
+  03-When-Something-Goes-Wrong.pdf
+
+Authorized defensive use only.
+Version 0.4.2
