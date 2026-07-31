@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
@@ -33,6 +34,26 @@ app = FastAPI(
     version="0.4.2",
     description="Autonomous Enterprise Guard & Intelligence System — control plane",
 )
+
+# Required for 3D console (browser origin :8765 → API :8080)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://127.0.0.1:8765",
+        "http://localhost:8765",
+        "http://127.0.0.1:8080",
+        "http://localhost:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+try:
+    from aegis.api.hardening import apply_hardening
+    apply_hardening(app)
+except Exception as _e:
+    logger.warning("hardening not applied: %s", _e)
 
 
 @app.middleware("http")
@@ -213,6 +234,12 @@ async def health() -> dict:
         cache_stats = (await get_cache()).stats()
     except Exception:
         cache_stats = {"backend": "unavailable"}
+    redis_info: dict = {}
+    try:
+        from aegis.core.redis_metrics import probe_redis_topology
+        redis_info = (await probe_redis_topology()).as_dict()
+    except Exception:
+        redis_info = {"error": "probe_failed"}
     return {
         "status": "ok",
         "agents": len(orch.agents),
@@ -221,7 +248,20 @@ async def health() -> dict:
         "persist": settings.persist_findings,
         "engagements_in_memory": len(orch.engagements),
         "cache": cache_stats,
+        "redis": {
+            "mode": redis_info.get("mode"),
+            "connected": redis_info.get("connected"),
+            "backend": redis_info.get("backend"),
+            "reachable_sentinels": redis_info.get("reachable_sentinels"),
+            "configured_sentinels": redis_info.get("configured_sentinels"),
+        },
     }
+
+
+@app.get("/redis/status")
+async def redis_status() -> dict:
+    from aegis.core.redis_metrics import probe_redis_topology
+    return (await probe_redis_topology()).as_dict()
 
 
 @app.get("/metrics")
